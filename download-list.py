@@ -15,3 +15,5 @@ with open(args.output, "w") as fw:
             print("Records:", i)
         fw.write(item['identifier'])
         fw.write("\n")
+
+# split -n l/5 list.txt list-part-
