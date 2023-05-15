@@ -52,7 +52,14 @@ with open(args.input) as f:
             metadata[k] = v
         with open(outFileName + ".json", "w") as fw:
             json.dump(metadata, fw)
-        item.download(formats="DjVuTXT", destdir=os.path.join(args.output, prefix), no_directory=True)
+        downloaded = False
+        while not downloaded:
+            try:
+                item.download(formats="DjVuTXT", destdir=os.path.join(args.output, prefix), no_directory=True)
+                downloaded = True
+            except:
+                print("ERR: File %s cannot be downloaded, sleeping..." % line)
+                time.sleep(args.sleep)
         time.sleep(args.sleep)
 
 # item = internetarchive.get_item("b20414973_0001")
