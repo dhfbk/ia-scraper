@@ -9,6 +9,7 @@ parser.add_argument("input", type=str, help="Input file")
 parser.add_argument("output", type=str, help="Output folder")
 parser.add_argument("--sleep", type=float, help="Sleep time between downloads", default=4.0)
 parser.add_argument("--checkpoint", type=int, help="Amount of downloads for notification", default=100)
+parser.add_argument("--num_attempts", type=int, help="Number of attempts to download an item", default=5)
 parser.add_argument("--verbose", action="store_true", help="Verbose output")
 args = parser.parse_args()
 
@@ -30,7 +31,16 @@ with open(args.input) as f:
             if args.verbose:
                 print("INFO: File %s already exists" % line)
             continue
-        item = internetarchive.get_item(line)
+        gotItem = False
+        attempts = 0
+        while not gotItem and attempts < args.num_attempts:
+            try:
+                item = internetarchive.get_item(line)
+                gotItem = True
+            except:
+                attempts += 1
+                print("ERR: Item %s cannot be downloaded, sleeping..." % line)
+                time.sleep(args.sleep)
         files = item.get_files()
         txtFileName = None
         for fi in files:
@@ -53,11 +63,13 @@ with open(args.input) as f:
         with open(outFileName + ".json", "w") as fw:
             json.dump(metadata, fw)
         downloaded = False
-        while not downloaded:
+        attempts = 0
+        while not downloaded and attempts < args.num_attempts:
             try:
                 item.download(formats="DjVuTXT", destdir=os.path.join(args.output, prefix), no_directory=True)
                 downloaded = True
             except:
+                attempts += 1
                 print("ERR: File %s cannot be downloaded, sleeping..." % line)
                 time.sleep(args.sleep)
         time.sleep(args.sleep)
