@@ -10,7 +10,7 @@ parser.add_argument("output", type=str, help="Output folder")
 parser.add_argument("--sleep", type=float, help="Sleep time between downloads", default=4.0)
 parser.add_argument("--checkpoint", type=int, help="Amount of downloads for notification", default=100)
 parser.add_argument("--num_attempts", type=int, help="Number of attempts to download an item", default=5)
-parser.add_argument("--max_depth", type=int, help="Maximum depth for recursion", default=5)
+parser.add_argument("--max_depth", type=int, help="Maximum depth for recursion", default=3)
 parser.add_argument("--verbose", action="store_true", help="Verbose output")
 args = parser.parse_args()
 
@@ -33,6 +33,8 @@ def download(args, line, depth):
             attempts += 1
             print("ERR: Item %s cannot be downloaded, sleeping..." % line)
             time.sleep(args.sleep)
+    if not gotItem:
+        return
     files = item.get_files()
     txtFileName = None
     for fi in files:
@@ -50,16 +52,20 @@ def download(args, line, depth):
             metadata['od_files'] = []
             for k, v in item.metadata.items():
                 metadata[k] = v
-            search = internetarchive.search_items(line)
-            for subItem in search:
-                if subItem['identifier'] == line:
-                    continue
-                metadata['od_files'].append(subItem['identifier'])
-                download(args, subItem['identifier'], depth + 1)
-            if args.verbose:
-                print("INFO: Saving JSON for %s" % line)
-            with open(outFileName + ".json", "w") as fw:
-                json.dump(metadata, fw)
+            try:
+                search = internetarchive.search_items(line)
+                for subItem in search:
+                    if subItem['identifier'] == line:
+                        continue
+                    metadata['od_files'].append(subItem['identifier'])
+                    download(args, subItem['identifier'], depth + 1)
+                if args.verbose:
+                    print("INFO: Saving JSON for %s" % line)
+                with open(outFileName + ".json", "w") as fw:
+                    json.dump(metadata, fw)
+            except:
+                print("ERR: problem in download, continuing...")
+                time.sleep(args.sleep)
         return
 
     if os.path.exists(os.path.join(args.output, prefix, txtFileName)):
@@ -97,7 +103,11 @@ with open(args.input) as f:
         if i % args.checkpoint == 0:
             print("INFO: checkpoint %d" % i)
         line = line.strip()
-        download(args, line, depth)
+        try:
+            download(args, line, depth)
+        except:
+            print("ERR: problem in download, continuing...")
+            time.sleep(args.sleep)
 
 # item = internetarchive.get_item("b20414973_0001")
 # for k,v in item.metadata.items():

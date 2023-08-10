@@ -2,3 +2,5 @@ list*
 env
 out
 .DS_Store
+out*
+
